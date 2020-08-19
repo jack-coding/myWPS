@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+class ChildWnd;
 namespace Ui {
 class MainWindow;
 }
@@ -18,9 +19,11 @@ public:
     void docNew();
 private slots:
     void on_newAction_triggered();
-
+    void refreshMenus();//刷新菜单
+    void addSubWdnList();//添加子窗口列表
 private:
     void FormatSetEnable();
+    ChildWnd* activateChildWnd();
 private:
     Ui::MainWindow *ui;
 };
