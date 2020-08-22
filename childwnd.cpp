@@ -1,5 +1,6 @@
 #include "childwnd.h"
 #include <QFileInfo>
+#include<QFile>
 
 ChildWnd::ChildWnd()
 {
@@ -18,7 +19,36 @@ void ChildWnd::newDoc()
 
 QString ChildWnd::getCurfileName()
 {
-   return QFileInfo(m_curfilePath).fileName();
+    return QFileInfo(m_curfilePath).fileName();
+}
+
+bool ChildWnd::loadFile(const QString &docName)
+{
+    if(docName.isEmpty())
+        return false;
+    QFile file(docName);
+    if(!file.exists())
+        return false;
+    if(!file.open(QFile::ReadOnly))
+        return false;
+    QByteArray text=file.readAll();
+    if(Qt::mightBeRichText(text))
+        setHtml(text);//如果是富文本,则将文件格式设置为html格式
+    else
+        setPlainText(text);//如果是纯文本,则将文件格式设置为纯文本格式
+    setCurDoc(docName);//设置活动窗口标题
+    connect(document(),SIGNAL(contentsChanged()),this,SLOT(docBeModified()));//一旦文件修改,将会修改活动子窗口的标题
+    return true;
+}
+
+void ChildWnd::setCurDoc(const QString &docName)
+{
+    //canonicalFilePath()返回标准名称路径,可以过滤文件名中的"." ".."
+    m_curfilePath=QFileInfo(docName).canonicalFilePath();//获取文件的绝对路径
+    m_isSave=true;//文件保存状态设置为已保存
+    document()->setModified(false);//文件暂未被修改
+    setWindowModified(false);//文件暂未被修改
+    setWindowTitle(docName+"[*]");//设置活动窗口标题
 }
 
 void ChildWnd::docBeModified()

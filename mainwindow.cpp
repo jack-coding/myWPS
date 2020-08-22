@@ -4,6 +4,8 @@
 #include <QApplication>
 #include <QMdiSubWindow>
 #include "childwnd.h"
+#include<QCloseEvent>
+#include<QFileDialog>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -44,6 +46,9 @@ void MainWindow::initMainWindow()
     addSubWdnList();//添加子窗口列表
     connect(ui->mdiArea,&QMdiArea::subWindowActivated,this,&MainWindow::refreshMenus);
     connect(ui->menu_W,&QMenu::aboutToShow,this,&MainWindow::addSubWdnList);
+    //创建信号映射器
+    m_sigalMapper=new QSignalMapper;
+    connect(m_sigalMapper,SIGNAL(mapped(QWidget*)),this,SLOT(setSubActiveWindow(QWidget*)));//将信号映射器的mapped信号与设置活动子窗口方法建立关联
 }
 
 void MainWindow::docNew()
@@ -60,7 +65,55 @@ void MainWindow::docNew()
     FormatSetEnable();
 }
 
-void MainWindow::FormatSetEnable()
+
+void MainWindow::docOpen()
+{
+    QString docName=QFileDialog::getOpenFileName(this,"打开文档","","txt文件(*.txt);;""HTML文件(*.html);;""所有文件(*.*)");
+    if(!docName.isEmpty()){
+        QMdiSubWindow* subwindow=findChildWnd(docName);
+        if(subwindow){
+            setSubActiveWindow(subwindow);
+        }
+        else{
+            ChildWnd * childwnd=new ChildWnd;
+            ui->mdiArea->addSubWindow(childwnd);//添加新的子窗口
+            connect(childwnd,SIGNAL(copyAvailable(bool)),ui->cutAction,SLOT(setEnabled(bool)));
+            connect(childwnd,SIGNAL(copyAvailable(bool)),ui->copyAction,SLOT(setEnabled(bool)));
+            if(childwnd->loadFile(docName)){
+                statusBar()->showMessage("文档已打开",3000);
+                childwnd->show();
+                FormatSetEnable();
+            }
+            else{
+                childwnd->close();
+            }
+        }
+    }
+}
+
+QMdiSubWindow *MainWindow::findChildWnd(const QString& docName)//在子窗口列表中寻找文件名为docName的窗口
+{
+    QString filePath=QFileInfo(docName).canonicalFilePath();
+    foreach (QMdiSubWindow* subWindow, ui->mdiArea->subWindowList()) {
+       ChildWnd* childWnd=qobject_cast<ChildWnd *> (subWindow->widget());
+       if(childWnd->m_curfilePath==docName)
+           return subWindow;
+    }
+    return 0;
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)//重写关闭事件,一旦关闭主窗口,将所有子窗口关闭
+{
+    ui->mdiArea->closeAllSubWindows();//将所有子窗口关闭
+    if(ui->mdiArea->currentSubWindow()){//如果还有子窗口未关闭,则将关闭事件忽略
+        event->ignore();
+    }
+    else{//如果已经关闭所有子窗口,则将close事件接受
+        event->accept();
+    }
+}
+
+void MainWindow::FormatSetEnable()//将风格控制菜单项激活使能状态
 {
     ui->boldAction->setEnabled(true);
     ui->centerAction->setEnabled(true);
@@ -111,6 +164,7 @@ void MainWindow::refreshMenus()//刷新窗口菜单
     ui->leftAlignAction->setEnabled(hasSelect);
     ui->rightAlighAction->setEnabled(hasSelect);
     ui->underlineAction->setEnabled(hasSelect);
+    ui->centerAction->setEnabled(hasSelect);
     ui->justifyAction->setEnabled(hasSelect);
     ui->colorAction->setEnabled(hasSelect);
 }
@@ -139,5 +193,49 @@ void MainWindow::addSubWdnList()
         QAction* menuAction=ui->menu_W->addAction(menu_text);
         menuAction->setCheckable(true);
         menuAction->setChecked(childWnd==activateChildWnd());
+        connect(menuAction,SIGNAL(triggered()),m_sigalMapper,SLOT(map()));//将菜单项点击信号与QSigalMapper的mapped方法建立关联
+        m_sigalMapper->setMapping(menuAction,Wnds.at(i));//设置信号发送者的携带参数
     }
+}
+
+void MainWindow::on_closeAction_triggered()
+{
+    ui->mdiArea->closeActiveSubWindow();
+}
+
+void MainWindow::on_closeAllAction_triggered()
+{
+    ui->mdiArea->closeAllSubWindows();
+}
+
+void MainWindow::on_titleAction_triggered()
+{
+    ui->mdiArea->tileSubWindows();
+}
+
+void MainWindow::on_casecadeAction_triggered()
+{
+    ui->mdiArea->cascadeSubWindows();
+}
+
+void MainWindow::on_nextAction_triggered()
+{
+    ui->mdiArea->activateNextSubWindow();
+}
+
+void MainWindow::on_previousAction_triggered()
+{
+    ui->mdiArea->activatePreviousSubWindow();
+}
+
+void MainWindow::setSubActiveWindow(QWidget *widget)
+{
+    if(!widget)
+        return ;
+    ui->mdiArea->setActiveSubWindow(qobject_cast<QMdiSubWindow*>(widget));
+}
+
+void MainWindow::on_openAction_triggered()
+{
+    docOpen();
 }
