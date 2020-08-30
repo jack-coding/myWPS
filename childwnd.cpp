@@ -1,6 +1,10 @@
 #include "childwnd.h"
 #include <QFileInfo>
-#include<QFile>
+#include <QFile>
+#include <QFileDialog>
+#include <QTextDocumentWriter>
+#include <QMessageBox>
+#include <QTextFormat>
 
 ChildWnd::ChildWnd()
 {
@@ -51,7 +55,92 @@ void ChildWnd::setCurDoc(const QString &docName)
     setWindowTitle(docName+"[*]");//设置活动窗口标题
 }
 
+bool ChildWnd::saveDoc()
+{
+    if(this->m_isSave)
+        return saveDocOpt(m_curfilePath);
+    else
+        return saveAsDoc();//如果没有保存,那就另存为
+}
+
+bool ChildWnd::saveAsDoc()
+{
+    QString docName=QFileDialog::getSaveFileName(this,"另存为",m_curfilePath,"HTML文档(*.htm *html);;所有文件(*.*)");
+    if(docName.isEmpty()) //如果文件名为空,直接返回false
+        return false;
+    else//文件名不为空,保存文件
+        return saveDocOpt(docName);
+}
+
+bool ChildWnd::saveDocOpt( QString &filename)
+{
+    //如果文件不是以htm或者html结尾的话,添加文件后缀.html
+    if(!(filename.endsWith(".htm",Qt::CaseInsensitive)||filename.endsWith(".html",Qt::CaseInsensitive))){
+        filename+=".html";
+    }
+
+   QTextDocumentWriter writer(filename);//用QTextDocumentWriter类对象的write方法实现文件的保存;
+   bool isSuccess=writer.write(this->document());
+   if(isSuccess) setCurDoc(filename);//如果保存成功,将文件的文件名重置
+   return isSuccess;//返回文件的保存结果
+}
+
+void ChildWnd::setFontFormatOnSelect(const QTextCharFormat &format)
+{
+    QTextCursor tcursor=textCursor();//获取当前光标
+    if(!tcursor.hasSelection()){
+        tcursor.select(QTextCursor::WordUnderCursor);//如果光标没有选中,那就选中光标选中的字符串
+    }
+    //合并文本格式
+    tcursor.mergeCharFormat(format);
+    mergeCurrentCharFormat(format);
+}
+
+void ChildWnd::setAlignOfDocumentText(int aligntype)
+{
+    if(aligntype==1)//左对齐
+        setAlignment(Qt::AlignLeft|Qt::AlignAbsolute);
+    else if(aligntype==2){//右对齐
+        setAlignment(Qt::AlignRight|Qt::AlignAbsolute);
+    }
+    else if(aligntype==3){//居中对齐
+        setAlignment(Qt::AlignCenter);
+    }
+    else if(aligntype==4){//两端对齐
+        setAlignment(Qt::AlignJustify);
+    }
+}
+
+void ChildWnd::setParaStyle(int pstyle)
+{
+
+}
+
+
 void ChildWnd::docBeModified()
 {
     setWindowModified(document()->isModified());
+}
+
+void ChildWnd::closeEvent(QCloseEvent *event)
+{
+    if(promptSave())//如果提示保存成功(用户保存了文件),则接受关闭事件
+        event->accept();
+    else//如果保存文件失败,那么忽略关闭事件
+        event->ignore();
+}
+
+bool ChildWnd::promptSave()
+{
+    if(!document()->isModified())//如果没有被修改,返回true;
+        return true;
+
+    QMessageBox::StandardButton result;
+    result=QMessageBox::warning(this,"系统提示",QString("文档%1已修改,是否保存?").arg(getCurfileName()),
+                                QMessageBox::Yes|QMessageBox::Discard|QMessageBox::No);
+    if(result==QMessageBox::Yes)
+            return saveDoc();
+    else if(result==QMessageBox::No)
+        return false;
+    return true;
 }

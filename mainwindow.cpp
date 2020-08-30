@@ -4,8 +4,9 @@
 #include <QApplication>
 #include <QMdiSubWindow>
 #include "childwnd.h"
-#include<QCloseEvent>
-#include<QFileDialog>
+#include <QCloseEvent>
+#include <QFileDialog>
+#include <QColorDialog>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -49,6 +50,13 @@ void MainWindow::initMainWindow()
     //创建信号映射器
     m_sigalMapper=new QSignalMapper;
     connect(m_sigalMapper,SIGNAL(mapped(QWidget*)),this,SLOT(setSubActiveWindow(QWidget*)));//将信号映射器的mapped信号与设置活动子窗口方法建立关联
+
+    //使用QActionGroup对居左 居右 居中 两端对齐控件进行分组,保证控件之间的互斥性
+    QActionGroup* actionGroup=new QActionGroup(this);//分组对象的父对象为当前对象
+    actionGroup->addAction(ui->centerAction);
+    actionGroup->addAction(ui->leftAlignAction);
+    actionGroup->addAction(ui->rightAlighAction);
+    actionGroup->addAction(ui->justifyAction);
 }
 
 void MainWindow::docNew()
@@ -91,6 +99,110 @@ void MainWindow::docOpen()
     }
 }
 
+void MainWindow::docSave()
+{
+    if(activateChildWnd()&&activateChildWnd()->saveDoc()){
+        this->statusBar()->showMessage("保存成功",3000);//在状态栏上显示3s保存成功
+    }
+}
+
+void MainWindow::docSaveAs()
+{
+    if(activateChildWnd()&&activateChildWnd()->saveAsDoc()){
+        this->statusBar()->showMessage("保存成功",3000);
+    }
+}
+
+void MainWindow::docUndo()
+{
+    if(activateChildWnd())
+        activateChildWnd()->undo();
+}
+
+void MainWindow::docRedo()
+{
+    if(activateChildWnd())
+        activateChildWnd()->redo();
+}
+
+void MainWindow::docCut()
+{
+    if(activateChildWnd())
+        activateChildWnd()->cut();
+}
+
+void MainWindow::docCopy()
+{
+    if(activateChildWnd())
+        activateChildWnd()->copy();
+}
+
+void MainWindow::docPaste()
+{
+    if(activateChildWnd())
+        activateChildWnd()->paste();
+}
+
+void MainWindow::textBold()
+{
+    QTextCharFormat fmt;
+    fmt.setFontWeight(ui->boldAction->isChecked()?QFont::Bold :QFont::Normal);
+    if(activateChildWnd())
+        activateChildWnd()->setFontFormatOnSelect(fmt);
+}
+
+void MainWindow::textItalic()
+{
+    QTextCharFormat fmt;
+    fmt.setFontItalic(ui->italicAction->isChecked());//设置字体的倾斜
+    if(activateChildWnd())//如果子窗口是活动的
+        activateChildWnd()->setFontFormatOnSelect(fmt);//设置选中字体的格式
+}
+
+void MainWindow::textUnderline()
+{
+    QTextCharFormat fmt;
+    fmt.setFontUnderline(ui->underlineAction->isChecked());
+    if(activateChildWnd())
+        activateChildWnd()->setFontFormatOnSelect(fmt);
+}
+
+void MainWindow::textFamily(const QString &family)
+{
+    QTextCharFormat fmt;
+    fmt.setFontFamily(family);//设置格式对象的字体
+    if(activateChildWnd()){
+        activateChildWnd()->setFontFormatOnSelect(fmt);//将格式对象传递给当前选中的文字
+    }
+}
+
+void MainWindow::textSize(const QString &fontSize)
+{
+    qreal pointSize=fontSize.toDouble();
+    QTextCharFormat fmt;
+    fmt.setFontPointSize(pointSize);//设置格式对象的字体大小
+    if(activateChildWnd()){
+        activateChildWnd()->setFontFormatOnSelect(fmt);//将格式对象传递给当前选中的文字
+    }
+}
+
+void MainWindow::textColor()
+{
+    if(activateChildWnd()){
+        QColor color=QColorDialog::getColor(activateChildWnd()->textColor(),this);
+        if(!color.isValid())
+            return;
+
+        QTextCharFormat fmt;
+        fmt.setForeground(color);
+        activateChildWnd()->setFontFormatOnSelect(fmt);
+
+        QPixmap pix(16,16);
+        pix.fill(color);
+        ui->colorAction->setIcon(pix);
+    }
+}
+
 QMdiSubWindow *MainWindow::findChildWnd(const QString& docName)//在子窗口列表中寻找文件名为docName的窗口
 {
     QString filePath=QFileInfo(docName).canonicalFilePath();
@@ -122,6 +234,7 @@ void MainWindow::FormatSetEnable()//将风格控制菜单项激活使能状态
     ui->italicAction->setEnabled(true);
     ui->underlineAction->setEnabled(true);
     ui->justifyAction->setEnabled(true);
+    ui->colorAction->setEnabled(true);
 }
 
 ChildWnd *MainWindow::activateChildWnd()
@@ -238,4 +351,93 @@ void MainWindow::setSubActiveWindow(QWidget *widget)
 void MainWindow::on_openAction_triggered()
 {
     docOpen();
+}
+
+void MainWindow::on_saveAction_triggered()
+{
+    docSave();
+}
+
+void MainWindow::on_otherSaveAction_triggered()
+{
+    docSaveAs();
+}
+
+void MainWindow::on_undoAction_triggered()
+{
+    docUndo();
+}
+
+void MainWindow::on_redoAction_triggered()
+{
+    docRedo();
+}
+
+void MainWindow::on_cutAction_triggered()
+{
+    docCut();
+}
+
+void MainWindow::on_copyAction_triggered()
+{
+    docCopy();
+}
+
+void MainWindow::on_pasteAction_triggered()
+{
+    docPaste();
+}
+
+void MainWindow::on_boldAction_triggered()
+{
+    textBold();
+}
+
+void MainWindow::on_italicAction_triggered()
+{
+    textItalic();
+}
+
+void MainWindow::on_underlineAction_triggered()
+{
+    textUnderline();
+}
+
+void MainWindow::on_fontComboBox_activated(const QString &arg1)
+{
+    textFamily(arg1);
+}
+
+void MainWindow::on_fontSizeComBox_activated(const QString &arg1)
+{
+    textSize(arg1);
+}
+
+void MainWindow::on_leftAlignAction_triggered()
+{
+    if(activateChildWnd())
+        activateChildWnd()->setAlignOfDocumentText(1);
+}
+
+void MainWindow::on_centerAction_triggered()
+{
+    if(activateChildWnd())
+        activateChildWnd()->setAlignOfDocumentText(3);
+}
+
+void MainWindow::on_rightAlighAction_triggered()
+{
+    if(activateChildWnd())
+        activateChildWnd()->setAlignOfDocumentText(2);
+}
+
+void MainWindow::on_justifyAction_triggered()
+{
+    if(activateChildWnd())
+        activateChildWnd()->setAlignOfDocumentText(4);
+}
+
+void MainWindow::on_colorAction_triggered()
+{
+    textColor();
 }
