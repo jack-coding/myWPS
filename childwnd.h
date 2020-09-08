@@ -19,7 +19,7 @@ public:
     bool saveDocOpt(QString &filename);
     void setFontFormatOnSelect(const QTextCharFormat& format);//设置选中字体的格式
     void setAlignOfDocumentText(int aligntype);//设置文字的位置(居左 居中 居右 两端对齐)
-    void setParaStyle(int pstyle);
+    void setParaStyle(int pstyle);//设置项目符号
 private slots:
     void docBeModified();//文档被修改时,给窗口标题栏加个*号
 protected:

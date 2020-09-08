@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QSignalMapper>
 #include <QMdiSubWindow>
+#include <QtPrintSupport/QPrinter>
 
 class ChildWnd;
 namespace Ui {
@@ -26,12 +27,15 @@ public:
     void docCut();//剪切
     void docCopy();//复制
     void docPaste();//粘贴
+    void docPrint();//打印
+    void docPrintPreview();//打印预览
     void textBold();//字体加粗
     void textItalic();//字体倾斜
     void textUnderline();//字体下划线
     void textFamily(const QString& family);//字体类型
     void textSize(const QString& fontSize);//字号
     void textColor();//字体颜色
+    void paraStyle(int nStyle);//项目符号
     QMdiSubWindow* findChildWnd(const QString& docName);//根据文档名查找子窗口
 protected:
     void closeEvent(QCloseEvent *event);//重写关闭事件
@@ -64,6 +68,10 @@ private slots:
     void on_rightAlighAction_triggered();
     void on_justifyAction_triggered();
     void on_colorAction_triggered();
+    void on_comboBox_activated(int index);
+    void on_printAction_triggered();
+    void printPreview(QPrinter* printer);
+    void on_printViewAction_triggered();
 
 private:
     void FormatSetEnable();

@@ -5,6 +5,11 @@
 #include <QTextDocumentWriter>
 #include <QMessageBox>
 #include <QTextFormat>
+#include <QTextListFormat>
+#include <QTextCursor>
+#include <QTextBlockFormat>
+#include <QTextListFormat>
+#include <QtWidgets>
 
 ChildWnd::ChildWnd()
 {
@@ -113,7 +118,63 @@ void ChildWnd::setAlignOfDocumentText(int aligntype)
 
 void ChildWnd::setParaStyle(int pstyle)
 {
+    QTextCursor tcursor=textCursor();//获取光标
 
+    QTextListFormat::Style sname;
+    if(pstyle!=0)
+    {
+        switch(pstyle){
+        case 1:
+            sname=QTextListFormat::ListDisc;//实心圆
+        break;
+        case 2:
+            sname=QTextListFormat::ListCircle;//空心圆
+        break;
+        case 3:
+            sname=QTextListFormat::ListSquare;//实心方形
+        break;
+        case 4:
+            sname=QTextListFormat::ListDecimal;//十进制整数
+        break;
+        case 5:
+            sname=QTextListFormat::ListLowerAlpha;//小写字母
+        break;
+        case 6:
+            sname=QTextListFormat::ListUpperAlpha;//大写字母
+        break;
+        case 7:
+            sname=QTextListFormat::ListLowerRoman;//小写罗马
+        break;
+        case 8:
+            sname=QTextListFormat::ListUpperRoman;//大写罗马
+        break;
+        default:
+            sname=QTextListFormat::ListDisc;//实心圆
+        break;
+        }
+
+        tcursor.beginEditBlock();
+
+        QTextBlockFormat tBlockFmt=tcursor.blockFormat();
+        QTextListFormat tListFmt;
+        if(tcursor.currentList()){//如果当前光标选中区域有项目列表,将列表格式设置为当前的列表格式
+            tListFmt=tcursor.currentList()->format();
+        }
+        else{//如果没有项目列表,设置项目列表的格式
+            tListFmt.setIndent(tBlockFmt.indent()+1);//1表示一个tab键的宽度
+            tBlockFmt.setIndent(0);
+            tcursor.setBlockFormat(tBlockFmt);
+        }
+        tListFmt.setStyle(sname);//设置列表格式
+        tcursor.createList(tListFmt);//将这个列表格式对象作为光标选中文本的格式
+
+        tcursor.endEditBlock();
+    }
+    else{
+        QTextBlockFormat tbfmt;//如果传入数字等于零,则将格式设置为无效
+        tbfmt.setObjectIndex(-1);
+        tcursor.mergeBlockFormat(tbfmt);
+    }
 }
 
 

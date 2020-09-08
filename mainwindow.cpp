@@ -8,6 +8,9 @@
 #include <QFileDialog>
 #include <QColorDialog>
 
+#include <QtPrintSupport/QPrintDialog>//打印对话框类头文件
+#include <QtPrintSupport/QPrintPreviewDialog>
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -143,6 +146,28 @@ void MainWindow::docPaste()
         activateChildWnd()->paste();
 }
 
+void MainWindow::docPrint()
+{
+    QPrinter pter(QPrinter::HighResolution);//打印机对象     像素采用打印机的像素
+    QPrintDialog *printDlg=new QPrintDialog(&pter,this);//打印对话框
+    if(activateChildWnd())
+        printDlg->setOption(QAbstractPrintDialog::PrintSelection);//保留用户的打印设置
+    printDlg->setWindowTitle("打印文档");
+
+    ChildWnd* childWnd=activateChildWnd();//获取活动窗口
+    if(printDlg->exec()==QDialog::Accepted)
+        childWnd->print(&pter);//用打印机打印活动窗口
+}
+
+void MainWindow::docPrintPreview()
+{
+    QPrinter pter;
+    QPrintPreviewDialog preview(&pter,this);//打印预览窗口
+    connect(&preview,SIGNAL(paintRequested(QPrinter*)),this,SLOT(printPreview(QPrinter*)));
+    preview.exec();//以模态的方式运行
+}
+
+
 void MainWindow::textBold()
 {
     QTextCharFormat fmt;
@@ -200,6 +225,13 @@ void MainWindow::textColor()
         QPixmap pix(16,16);
         pix.fill(color);
         ui->colorAction->setIcon(pix);
+    }
+}
+
+void MainWindow::paraStyle(int nStyle)
+{
+    if(activateChildWnd()){
+        activateChildWnd()->setParaStyle(nStyle);
     }
 }
 
@@ -440,4 +472,24 @@ void MainWindow::on_justifyAction_triggered()
 void MainWindow::on_colorAction_triggered()
 {
     textColor();
+}
+
+void MainWindow::on_comboBox_activated(int index)
+{
+    paraStyle(index);
+}
+
+void MainWindow::on_printAction_triggered()
+{
+    docPrint();
+}
+
+void MainWindow::printPreview(QPrinter *printer)
+{
+    activateChildWnd()->print(printer);
+}
+
+void MainWindow::on_printViewAction_triggered()
+{
+    docPrintPreview();
 }
